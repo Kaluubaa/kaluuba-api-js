@@ -12,6 +12,25 @@ export default (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
     }
+
+    getFullName() {
+      return `${this.firstname} ${this.lastname}`.trim();
+    }
+
+    /**
+     * Check if user is verified
+     */
+    isEmailVerified() {
+      return this.isverified && this.emailVerifiedAt !== null;
+    }
+
+    /**
+     * Get safe user data (without sensitive fields)
+     */
+    getSafeUserData() {
+      const { password, verificationToken, privateKey, ...safeData } = this.toJSON();
+      return safeData;
+    }
   }
   User.init({
     firstname: DataTypes.STRING,

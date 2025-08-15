@@ -49,6 +49,7 @@
       },
       isverified: {
         type: Sequelize.BOOLEAN,
+        default: false,
         allowNull: true
       },
       verificationToken: {
