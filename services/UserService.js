@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { Op } from 'sequelize';
 import db from '../models/index.js';
 import { BASE_URL } from '../utils/constants.js';
+import SmartAccountService from './SmartAccountService.js';
 
 const { User } = db;
 
@@ -126,10 +127,24 @@ class UserService {
         return { success: false, message: 'Invalid or expired verification token' };
       }
 
+    const createdWallet = await SmartAccountService.createUserWallet(
+        user.id.toString(),
+        user.password
+      );
+
+      if (!createdWallet.success) {
+        throw new Error('Failed to create user wallet');
+      }
+
+      console.log(createdWallet);
+
       await user.update({
         isverified: true,
         emailVerifiedAt: new Date(),
-        verificationToken: null
+        verificationToken: null,
+        walletAddress: createdWallet.walletData.walletAddress,
+        smartAccountAddress: createdWallet.walletData.smartAccountAddress,
+        privateKey: createdWallet.walletData.encryptedPrivateKey
       });
 
       return { success: true, message: 'Email verified successfully' };
