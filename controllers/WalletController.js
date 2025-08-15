@@ -374,19 +374,18 @@ class WalletController {
         }
       }
 
-      // Get smart account balance
-      if (user.smartAccount) {
+      if (user.smartAccountAddress) {
         try {
-          const smartAccountBalance = await SmartAccountService.getWalletBalance(user.smartAccount);
+          const smartAccountBalance = await SmartAccountService.getWalletBalance(user.smartAccountAddress);
           balances.smartAccount = {
-            address: user.smartAccount,
+            address: user.smartAccountAddress,
             balance: smartAccountBalance,
             type: 'Smart Account'
           };
         } catch (error) {
           console.error('Error fetching smart account balance:', error);
           balances.smartAccount = {
-            address: user.smartAccount,
+            address: user.smartAccountAddress,
             balance: null,
             error: 'Failed to fetch balance',
             type: 'Smart Account'

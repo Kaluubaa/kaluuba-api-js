@@ -41,7 +41,6 @@ export default (sequelize, DataTypes) => {
     privateKey: DataTypes.TEXT,
     pin: DataTypes.STRING,
     walletAddress: DataTypes.STRING,
-    smartAccount: DataTypes.STRING,
     smartAccountAddress: DataTypes.STRING,
     smartAccountBalance: DataTypes.DECIMAL(20, 9),
     country: DataTypes.STRING,

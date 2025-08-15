@@ -43,11 +43,7 @@
         type: Sequelize.STRING,
         allowNull: true
       },
-      smartAccount: {
-        type: Sequelize.STRING,
-        allowNull: true
-      },
-        smartAccountAddress: {
+      smartAccountAddress: {
         type: Sequelize.STRING,
         allowNull: true
       },
