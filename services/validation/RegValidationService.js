@@ -111,7 +111,7 @@ class RegValidationService {
     return { isValid: true, value: trimmedName };
   }
 
-  static validateRegistrationData({ username, email, password }) {
+  static validateRegistrationData({ username, email, password, country }) {
     const errors = [];
     const validatedData = {};
 
@@ -123,13 +123,13 @@ class RegValidationService {
     //   validatedData.firstname = firstnameValidation.value;
     // }
 
-    // // Validate lastname
-    // const lastnameValidation = this.validateName(lastname, 'Last name');
-    // if (!lastnameValidation.isValid) {
-    //   errors.push({ field: 'lastname', message: lastnameValidation.message });
-    // } else {
-    //   validatedData.lastname = lastnameValidation.value;
-    // }
+    // Validate country
+    const countryValidation = this.validateName(country, 'country');
+    if (!countryValidation.isValid) {
+      errors.push({ field: 'country', message: countryValidation.message });
+    } else {
+      validatedData.country = countryValidation.value;
+    }
 
     // Validate username
     const usernameValidation = this.validateUsername(username);
