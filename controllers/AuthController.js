@@ -14,8 +14,6 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not defined');
 }
 
-const JWT_EXPIRES_IN="1h";
-
 
 export const register = async (req, res) => {
     try {
@@ -126,7 +124,7 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '1h' }
     );
 
     await UserService.updateLastLogin(user.id);
