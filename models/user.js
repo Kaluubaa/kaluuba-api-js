@@ -42,6 +42,10 @@ export default (sequelize, DataTypes) => {
     pin: DataTypes.STRING,
     walletAddress: DataTypes.STRING,
     smartAccount: DataTypes.STRING,
+    smartAccountAddress: DataTypes.STRING,
+    smartAccountBalance: DataTypes.DECIMAL(20, 9),
+    country: DataTypes.STRING,
+    lastLoginAt: DataTypes.STRING,
     isverified: DataTypes.BOOLEAN,
     verificationToken: DataTypes.STRING,
     emailVerifiedAt: DataTypes.DATE

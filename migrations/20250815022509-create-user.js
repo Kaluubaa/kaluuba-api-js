@@ -47,6 +47,15 @@
         type: Sequelize.STRING,
         allowNull: true
       },
+        smartAccountAddress: {
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      smartAccountBalance: {
+        type: Sequelize.DECIMAL(20, 9),
+        default: 0,
+        allowNull: true,
+      },
       isverified: {
         type: Sequelize.BOOLEAN,
         default: false,
@@ -58,6 +67,10 @@
       },
       emailVerifiedAt: {
         type: Sequelize.DATE,
+        allowNull: true
+      },
+      country: {
+        type: Sequelize.STRING,
         allowNull: true
       },
       lastLoginAt: {
@@ -73,6 +86,44 @@
         type: Sequelize.DATE
       }
     });
+
+  await queryInterface.addIndex('Users', ['email'], {
+    name: 'users_email_index',
+    unique: true
+  });
+
+  await queryInterface.addIndex('Users', ['username'], {
+    name: 'users_username_index',
+    unique: true
+  });
+
+  await queryInterface.addIndex('Users', ['walletAddress'], {
+    name: 'users_wallet_address_index',
+    where: {
+      walletAddress: {
+        [Sequelize.Op.ne]: null
+      }
+    }
+  });
+
+  await queryInterface.addIndex('Users', ['smartAccountAddress'], {
+    name: 'users_smart_account_address_index',
+    where: {
+      smartAccountAddress: {
+        [Sequelize.Op.ne]: null
+      }
+    }
+  });  
+
+    await queryInterface.addIndex('Users', ['smartAccountBalance'], {
+    name: 'users_smart_account_balance_index',
+    where: {
+      smartAccountBalance: {
+        [Sequelize.Op.ne]: null
+      }
+    }
+  }); 
+
   }
   
   export async function down(queryInterface, Sequelize) {
