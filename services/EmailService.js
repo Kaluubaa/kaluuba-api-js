@@ -56,7 +56,7 @@ class EmailService {
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #2c3e50;">Welcome to Kaluuba!</h2>
-          <p>Hello ${firstName},</p>
+          <p>Hello ${username},</p>
           <p>Thank you for registering with us. To complete your account setup, please verify your email address by clicking the button below:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationLink}" 
