@@ -2,6 +2,20 @@ import RegValidationService from '../services/validation/RegValidationService.js
 import UserService from '../services/UserService.js';
 import EmailService from '../services/EmailService.js';
 import { ApiResponse } from '../utils/apiResponse.js';
+import LoginValidationService from '../services/validation/LoginValidationService.js';
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (typeof JWT_SECRET !== 'string') {
+  throw new Error('JWT_SECRET environment variable is not defined or not a string');
+}
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is not defined');
+}
+
+const JWT_EXPIRES_IN="1h";
+
 
 export const register = async (req, res) => {
     try {
@@ -74,6 +88,66 @@ export const register = async (req, res) => {
     }
   }
 
+export const login = async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+
+    const validation = LoginValidationService.validateLoginData({
+      identifier,
+      password
+    });
+
+    if (!validation.isValid) {
+      return ApiResponse.validationError(res, validation.errors);
+    }
+
+    const { validatedData } = validation;
+
+    let user;
+    if (validatedData.isEmail) {
+      user = await UserService.findUserByEmail(validatedData.identifier);
+    } else {
+      user = await UserService.findUserByUsername(validatedData.identifier);
+    }
+
+    if (!user) {
+      return ApiResponse.unauthorized(res, 'Invalid login credentials');
+    }
+
+    const passwordMatch = await bcrypt.compare(validatedData.password, user.password);
+    if (!passwordMatch) {
+      return ApiResponse.unauthorized(res, 'Invalid login credentials');
+    }
+
+    if (!user.isverified) {
+      return ApiResponse.forbidden(res, 'Please verify your email address first');
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    await UserService.updateLastLogin(user.id);
+
+    return ApiResponse.success(res, {
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isverified: user.isverified
+      },
+      token
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return ApiResponse.serverError(res, 'Login failed. Please try again.');
+  }
+};
+
 export const verifyEmail = async (req, res) => {
     try {
       const { email, token } = req.query;
@@ -118,11 +192,23 @@ export async function resendVerification(req, res) {
       if (user.isverified) {
         return ApiResponse.badRequest(res, 'Email is already verified');
       }
+      const now = new Date();
+      const lastUpdated = new Date(user.updatedAt);
+      const minutesSinceLastUpdate = (now - lastUpdated) / (1000 * 60);
+
+      if (minutesSinceLastUpdate < 5 && user.verificationToken) {
+        return ApiResponse.error(res, 
+          'Please wait at least 5 minutes before requesting another verification email'
+        );
+      }
 
       let verificationToken = user.verificationToken;
-      if (!verificationToken) {
+      if (!verificationToken || minutesSinceLastUpdate >= 5) {
         verificationToken = UserService.generateVerificationToken();
-        await user.update({ verificationToken });
+        await user.update({ 
+          verificationToken: verificationToken,
+          updatedAt: now
+        });
       }
 
       const verificationLink = UserService.generateVerificationLink(
@@ -132,7 +218,7 @@ export async function resendVerification(req, res) {
 
       await EmailService.sendVerificationEmail(
         user.email,
-        user.firstname,
+        user.username,
         verificationLink
       );
 
