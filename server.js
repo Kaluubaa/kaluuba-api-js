@@ -1,5 +1,7 @@
 import express from "express"
 import dotenv from "dotenv"
+import  db  from './models/index.js';
+
 dotenv.config()
 
 const app = express()
@@ -9,6 +11,8 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.listen(port, () => {
-  console.log(`Kaluuba api: listening on http://localhost:${port}`)
+db.sequelize.sync({ alter: true }).then(() => {
+    app.listen(port, () => {
+        console.log(`Kaluuba api: listening on http://localhost:${port}`)
+    })
 })
