@@ -1,0 +1,1 @@
+export const formatKaluubaName = (username: String): String => `${username.toLowerCase()}.kaluuba`
