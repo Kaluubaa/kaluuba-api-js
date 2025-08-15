@@ -5,12 +5,13 @@ import { ApiResponse } from '../utils/apiResponse.js';
 
 export const register = async (req, res) => {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password, country } = req.body;
 
       const validation = RegValidationService.validateRegistrationData({
         username,
         email,
-        password
+        password,
+        country
       });
 
       if (!validation.isValid) {
@@ -19,7 +20,6 @@ export const register = async (req, res) => {
 
       const { validatedData } = validation;
 
-      // Check if user already exists
       const userExistsCheck = await UserService.checkUserExists(
         validatedData.email,
         validatedData.username
