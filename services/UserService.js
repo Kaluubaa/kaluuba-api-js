@@ -102,7 +102,7 @@ class UserService {
     }
   }
 
-    static async findUserByUsername(username) {
+  static async findUserByUsername(username) {
     try {
       return await User.findOne({ 
         where: { username: username.toLowerCase() } 
@@ -111,6 +111,13 @@ class UserService {
       console.error('Error finding user by username:', error);
       throw new Error('Database error occurred');
     }
+  }
+
+  static async updateLastLogin(userId) {
+    return await User.update(
+      { lastLoginAt: new Date() },
+      { where: { id: userId } }
+    );
   }
 
   static async verifyEmailToken(email, token) {
