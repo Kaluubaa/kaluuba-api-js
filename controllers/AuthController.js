@@ -45,16 +45,11 @@ export const register = async (req, res) => {
 
       const user = await UserService.createUser(validatedData);
 
-      const verificationLink = UserService.generateVerificationLink(
-        user.email,
-        user.verificationToken
-      );
-
       try {
         await EmailService.sendVerificationEmail(
           user.email,
           user.username,
-          verificationLink
+          user.verificationToken
         );
         
         console.log(`Verification email sent to ${user.email}`);
@@ -148,13 +143,13 @@ export const login = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
     try {
-      const { email, token } = req.query;
+      const { email, otp } = req.body;
 
-      if (!email || !token) {
-        return ApiResponse.badRequest(res, 'Email and verification token are required');
+      if (!email || !otp) {
+        return ApiResponse.badRequest(res, 'Email and verification OTP are required');
       }
 
-      const result = await UserService.verifyEmailToken(email, token);
+      const result = await UserService.verifyEmailToken(email, otp);
 
       if (result.success) {
         return ApiResponse.success(res, { message: result.message });
@@ -202,22 +197,17 @@ export async function resendVerification(req, res) {
 
       let verificationToken = user.verificationToken;
       if (!verificationToken || minutesSinceLastUpdate >= 5) {
-        verificationToken = UserService.generateVerificationToken();
+        verificationToken = UserService.generateOTP();
         await user.update({ 
           verificationToken: verificationToken,
           updatedAt: now
         });
       }
 
-      const verificationLink = UserService.generateVerificationLink(
-        user.email,
-        verificationToken
-      );
-
       await EmailService.sendVerificationEmail(
         user.email,
         user.username,
-        verificationLink
+        user.verificationToken
       );
 
       return ApiResponse.success(res, {
