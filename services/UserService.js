@@ -45,8 +45,8 @@ class UserService {
     }
   }
 
-  static generateVerificationToken() {
-    return crypto.randomBytes(32).toString('hex');
+  static generateOTP() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
   static async createUser(userData) {
@@ -54,7 +54,7 @@ class UserService {
     
     try {
       const hashedPassword = await this.hashPassword(password);
-      const verificationToken = this.generateVerificationToken();
+      const verificationToken = this.generateOTP();
 
       const user = await User.create({
         username: username.toLowerCase(),
@@ -87,9 +87,9 @@ class UserService {
     }
   }
 
-  static generateVerificationLink(email, token) {
-    return `${BASE_URL}/auth/verify-email?email=${encodeURIComponent(email)}&token=${token}`;
-  }
+//   static generateVerificationLink(email, token) {
+//     return `${BASE_URL}/auth/verify-email?email=${encodeURIComponent(email)}&token=${token}`;
+//   }
 
   static async findUserByEmail(email) {
     try {
@@ -120,41 +120,59 @@ class UserService {
     );
   }
 
-  static async verifyEmailToken(email, token) {
+  static async verifyEmailToken(email, otp) {
     try {
       const user = await User.findOne({
         where: {
           email: email.toLowerCase(),
-          verificationToken: token,
+          verificationToken: otp,
           isverified: false
         }
       });
 
-      if (!user) {
-        return { success: false, message: 'Invalid or expired verification token' };
-      }
+        if (!user) {
+            return { success: false, message: 'User not found' };
+        }
 
-    const createdWallet = await SmartAccountService.createUserWallet(
-        user.id.toString(),
-        user.password
-      );
+        if (user.isverified) {
+        return { success: false, message: 'Email is already verified' };
+        }
 
-      if (!createdWallet.success) {
+        if (!user.verificationToken) {
+        return { success: false, message: 'No valid OTP found. Please request a new one.' };
+        }
+
+        const now = new Date();
+        const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+        
+        if (user.updatedAt < fifteenMinutesAgo) {
+        return { success: false, message: 'Invalid or expired verification OTP' };
+        }
+
+        if (user.verificationToken !== otp) {
+        return { success: false, message: 'Invalid OTP' };
+        }
+
+        const createdWallet = await SmartAccountService.createUserWallet(
+            user.id.toString(),
+            user.password
+            );
+
+        if (!createdWallet.success) {
         throw new Error('Failed to create user wallet');
-      }
+        }
 
-      console.log(createdWallet);
 
-      await user.update({
+        await user.update({
         isverified: true,
         emailVerifiedAt: new Date(),
         verificationToken: null,
         walletAddress: createdWallet.walletData.walletAddress,
         smartAccountAddress: createdWallet.walletData.smartAccountAddress,
         privateKey: createdWallet.walletData.encryptedPrivateKey
-      });
+        });
 
-      return { success: true, message: 'Email verified successfully' };
+        return { success: true, message: 'Email verified successfully' };
     } catch (error) {
       console.error('Error verifying email token:', error);
       throw new Error('Failed to verify email');
