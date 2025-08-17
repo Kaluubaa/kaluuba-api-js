@@ -45,109 +45,34 @@ export default (sequelize, DataTypes) => {
     }
   }
   Transaction.init({
-  id: {
-    type: DataTypes.BIGINT,
-    defaultValue: DataTypes.BIGINT,
-    primaryKey: true
-  },
-  transactionId: {
-    type: DataTypes.STRING,
-    unique: true,
-    allowNull: false
-  },
-  senderId: {
-    type: DataTypes.BIGINT,
-    allowNull: false
-  },
-  recipientId: {
-    type: DataTypes.BIGINT,
-    allowNull: true
-  },
-  recipientAddress: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  recipientIdentifier: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  tokenAddress: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  tokenSymbol: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  amount: {
-    type: DataTypes.DECIMAL(36, 18),
-    allowNull: false
-  },
-  amountUSD: {
-    type: DataTypes.DECIMAL(20, 9),
-    allowNull: true
-  },
-  blockchainTxHash: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  blockNumber: {
-    type: DataTypes.BIGINT,
-    allowNull: true
-  },
-  gasUsed: {
-    type: DataTypes.BIGINT,
-    allowNull: true
-  },
-  gasFee: {
-    type: DataTypes.DECIMAL(36, 18),
-    allowNull: true
-  },
-  status: {
-    type: DataTypes.ENUM(
+  transactionId: DataTypes.STRING,
+  senderId: DataTypes.BIGINT,
+  recipientId: DataTypes.BIGINT,
+  recipientAddress: DataTypes.STRING,
+  recipientIdentifier: DataTypes.STRING,
+  tokenAddress:DataTypes.STRING,
+  tokenSymbol: DataTypes.STRING,
+  amount: DataTypes.DECIMAL(36, 18),
+  amountUSD: DataTypes.DECIMAL(20, 9),
+  blockchainTxHash: DataTypes.STRING,
+  blockNumber: DataTypes.BIGINT,
+  gasUsed: DataTypes.BIGINT,
+  gasFee: DataTypes.DECIMAL(36, 18),
+  status: DataTypes.ENUM(
       PaymentStatus.pending, 
       PaymentStatus.submitted, 
       PaymentStatus.confirmed, 
       PaymentStatus.failed, 
       PaymentStatus.cancelled
     ),
-    allowNull: false,
-    defaultValue: PaymentStatus.pending
-  },
-  transactionType: {
-    type: DataTypes.ENUM(TransactionType.direct, TransactionType.invoice),
-    allowNull: false,
-    defaultValue: TransactionType.direct
-  },
-  invoiceId: {
-    type: DataTypes.BIGINT,
-    allowNull: true
-  },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  metadata: {
-    type: DataTypes.JSONB,
-    allowNull: true
-  },
-  platformFee: {
-    type: DataTypes.DECIMAL(20, 9),
-    allowNull: true,
-    defaultValue: 0
-  },
-  exchangeRate: {
-    type: DataTypes.DECIMAL(20, 9),
-    allowNull: true
-  },
-  submittedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  },
-  confirmedAt: {
-    type: DataTypes.DATE,
-    allowNull: true
-  }
+  transactionType: DataTypes.ENUM(TransactionType.direct, TransactionType.invoice),
+  invoiceId: DataTypes.BIGINT,
+  description: DataTypes.TEXT,
+  metadata:  DataTypes.JSONB,
+  platformFee: DataTypes.DECIMAL(20, 9),
+  exchangeRate: DataTypes.DECIMAL(20, 9),
+  submittedAt: DataTypes.DATE,
+  confirmedAt:  DataTypes.DATE
 }, {
   sequelize,
   modelName: 'Transaction',
