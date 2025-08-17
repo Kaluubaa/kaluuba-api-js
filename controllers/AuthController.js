@@ -6,15 +6,6 @@ import LoginValidationService from '../services/validation/LoginValidationServic
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (typeof JWT_SECRET !== 'string') {
-  throw new Error('JWT_SECRET environment variable is not defined or not a string');
-}
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is not defined');
-}
-
-
 export const register = async (req, res) => {
     try {
       const { username, email, password, country } = req.body;
@@ -116,11 +107,7 @@ export const login = async (req, res) => {
       return ApiResponse.forbidden(res, 'Please verify your email address first');
     }
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    const token = generateJwtToken(user)
 
     await UserService.updateLastLogin(user.id);
 
@@ -152,7 +139,11 @@ export const verifyEmail = async (req, res) => {
       const result = await UserService.verifyEmailToken(email, otp);
 
       if (result.success) {
-        return ApiResponse.success(res, { message: result.message });
+        const token = generateJwtToken(result.user)
+        return ApiResponse.success(res, { 
+            message: result.message,
+            token: token
+         });
       } else {
         return ApiResponse.badRequest(res, result.message);
       }
@@ -218,4 +209,22 @@ export async function resendVerification(req, res) {
       console.error('Resend verification error:', error);
       return ApiResponse.serverError(res, 'Failed to resend verification email');
     }
+  }
+
+  function generateJwtToken(user) {
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (typeof JWT_SECRET !== 'string') {
+    throw new Error('JWT_SECRET environment variable is not defined or not a string');
+    }
+    if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is not defined');
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    return token
   }

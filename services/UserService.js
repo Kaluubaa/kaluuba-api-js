@@ -172,7 +172,7 @@ class UserService {
         privateKey: createdWallet.walletData.encryptedPrivateKey
         });
 
-        return { success: true, message: 'Email verified successfully' };
+        return { success: true, message: 'Email verified successfully', user };
     } catch (error) {
       console.error('Error verifying email token:', error);
       throw new Error('Failed to verify email');
