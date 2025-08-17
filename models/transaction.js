@@ -2,7 +2,7 @@
 import {
   Model
 } from 'sequelize';
-import { PaymentStatus } from '../utils/types.ts';
+import { PaymentStatus, TransactionType } from '../utils/types.ts';
 
 export default (sequelize, DataTypes) => {
   class Transaction extends Model {
@@ -104,14 +104,20 @@ export default (sequelize, DataTypes) => {
     allowNull: true
   },
   status: {
-    type: DataTypes.ENUM('pending', 'submitted', 'confirmed', 'failed', 'cancelled'),
+    type: DataTypes.ENUM(
+      PaymentStatus.pending, 
+      PaymentStatus.submitted, 
+      PaymentStatus.confirmed, 
+      PaymentStatus.failed, 
+      PaymentStatus.cancelled
+    ),
     allowNull: false,
-    defaultValue: 'pending'
+    defaultValue: PaymentStatus.pending
   },
   transactionType: {
-    type: DataTypes.ENUM('direct', 'invoice'),
+    type: DataTypes.ENUM(TransactionType.direct, TransactionType.invoice),
     allowNull: false,
-    defaultValue: 'direct'
+    defaultValue: TransactionType.direct
   },
   invoiceId: {
     type: DataTypes.BIGINT,
@@ -145,7 +151,7 @@ export default (sequelize, DataTypes) => {
 }, {
   sequelize,
   modelName: 'Transaction',
-  tableName: 'Transactions'
+  tableName: 'transactions'
 });
 
   return Transaction;

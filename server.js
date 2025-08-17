@@ -3,6 +3,7 @@ import cors from "cors"
 import dotenv from "dotenv"
 import  db  from './models/index.js';
 import authRoutes from "./routes/auth.js"
+import transactionRoutes from "./routes/transactions.js"
 dotenv.config()
 
 const app = express()
@@ -20,6 +21,7 @@ app.use(cors({
 
 
 app.use(`${url}/auth`, authRoutes)
+app.use(`${url}/transactions`, transactionRoutes)
 
 app.get(`/`, (req, res) => {
   res.send('Hello World!')

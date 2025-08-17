@@ -26,6 +26,7 @@
   "dependencies": {
     "@circle-fin/modular-wallets-core": "^1.0.11",
     "@sequelize/postgres": "^7.0.0-alpha.46",
+    "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
