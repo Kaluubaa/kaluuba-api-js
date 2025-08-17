@@ -4,12 +4,12 @@ const { PaymentStatus, TransactionType } = require('../utils/types');
 
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
-  await queryInterface.createTable('Transactions', {
+  await queryInterface.createTable('transactions', {
     id: {
       allowNull: false,
       autoIncrement: true,
       primaryKey: true,
-      type: Sequelize.INTEGER
+      type: Sequelize.BIGINT
     },
     transactionId: {
       type: Sequelize.STRING,
@@ -148,5 +148,5 @@ export async function up(queryInterface, Sequelize) {
   await queryInterface.addIndex('Transactions', ['tokenAddress']);
 }
 export async function down(queryInterface, Sequelize) {
-  await queryInterface.dropTable('Transactions');
+  await queryInterface.dropTable('transactions');
 }
