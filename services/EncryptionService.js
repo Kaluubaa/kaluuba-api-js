@@ -85,7 +85,7 @@ class EncryptionService {
    * @param {string} password - The password for decryption
    * @returns {Promise<string>} The decrypted private key
    */
-  static async decryptPrivateKey(encryptedData, password) {
+static async decryptPrivateKey(encryptedData, password) {
     try {
       if (!encryptedData || !password) {
         throw new Error('Encrypted data and password are required');
@@ -94,14 +94,24 @@ class EncryptionService {
       // Decode from base64
       const combined = Buffer.from(encryptedData, 'base64');
 
+      // Verify minimum length
+      const minLength = this.SALT_LENGTH + this.IV_LENGTH + this.TAG_LENGTH;
+      if (combined.length < minLength) {
+        throw new Error('Invalid encrypted data format');
+      }
+
       // Extract components
-      const salt = combined.slice(0, this.SALT_LENGTH);
-      const iv = combined.slice(this.SALT_LENGTH, this.SALT_LENGTH + this.IV_LENGTH);
-      const tag = combined.slice(
-        this.SALT_LENGTH + this.IV_LENGTH,
-        this.SALT_LENGTH + this.IV_LENGTH + this.TAG_LENGTH
-      );
-      const encrypted = combined.slice(this.SALT_LENGTH + this.IV_LENGTH + this.TAG_LENGTH);
+      let position = 0;
+      const salt = combined.slice(position, position + this.SALT_LENGTH);
+      position += this.SALT_LENGTH;
+      
+      const iv = combined.slice(position, position + this.IV_LENGTH);
+      position += this.IV_LENGTH;
+      
+      const tag = combined.slice(position, position + this.TAG_LENGTH);
+      position += this.TAG_LENGTH;
+      
+      const encrypted = combined.slice(position);
 
       // Derive key from password
       const key = await this.deriveKey(password, salt);
@@ -129,14 +139,22 @@ class EncryptionService {
    * @param {string} userId - User's ID for additional entropy
    * @returns {Promise<string>} Master password for encryption
    */
-  static async generateMasterPassword(userPassword, userId) {
+static async generateMasterPassword(userPassword, userId) {
     try {
       // Combine user password with user ID for additional entropy
-      const combined = `${userPassword}:${userId}:${process.env.ENCRYPTION_SECRET}`;
+      const combined = `${userPassword}:${userId}:${process.env.ENCRYPTION_SECRET || ''}`;
       
       // Use PBKDF2 to derive a consistent master password
-      const masterPassword = crypto.pbkdf2Sync(combined, 'encryption-salt', 100000, 32, 'sha256');
-      return masterPassword.toString('hex');
+      const masterPassword = crypto.pbkdf2Sync(
+        combined, 
+        'encryption-salt', 
+        100000, 
+        32, 
+        'sha256'
+      );
+      
+      // Return as base64 string instead of hex
+      return masterPassword.toString('base64');
     } catch (error) {
       console.error('Error generating master password:', error);
       throw new Error('Failed to generate master password');
