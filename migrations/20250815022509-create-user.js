@@ -2,12 +2,12 @@
 
 /** @type {import('sequelize-cli').Migration} */
   export async function up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Users', {
+    await queryInterface.createTable('users', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.BIGINT
       },
       firstname: {
         type: Sequelize.STRING,
@@ -123,5 +123,5 @@
   }
   
   export async function down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Users');
+    await queryInterface.dropTable('users');
   }
