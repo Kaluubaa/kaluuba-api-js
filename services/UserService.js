@@ -4,6 +4,7 @@ import { Op } from 'sequelize';
 import db from '../models/index.js';
 import { BASE_URL } from '../utils/constants.js';
 import SmartAccountService from './SmartAccountService.js';
+import EncryptionService from './EncryptionService.js';
 
 const { User } = db;
 
@@ -178,6 +179,72 @@ class UserService {
       throw new Error('Failed to verify email');
     }
   }
+
+static async setUserPin(userId, password, pin) {
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Verify user's password first
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      throw new Error('Invalid password');
+    }
+
+    if (!/^\d{6}$/.test(pin)) {
+      throw new Error('PIN must be 6 digits');
+    }
+
+    const masterPassword = await EncryptionService.generateMasterPassword(password, userId);
+
+    const encryptedPin = await EncryptionService.encryptPrivateKey(pin, masterPassword);
+
+    await user.update({ pin: encryptedPin });
+    return true;
+  } catch (error) {
+    console.error('Error setting user PIN:', error);
+    throw new Error(`Failed to set PIN: ${error.message}`);
+  }
+}
+
+static async updateUserPin(userId, currentPassword, newPin) {
+  try {
+    return await this.setUserPin(userId, currentPassword, newPin);
+  } catch (error) {
+    console.error('Error updating user PIN:', error);
+    throw new Error(`Failed to update PIN: ${error.message}`);
+  }
+}
+
+static async getDecryptedPin(userId, password) {
+  try {
+    const user = await User.findByPk(userId);
+    if (!user || !user.pin) {
+      throw new Error('PIN not set for user');
+    }
+
+    const masterPassword = await EncryptionService.generateMasterPassword(password, userId);
+
+    const decryptedPin = await EncryptionService.decryptPrivateKey(user.pin, masterPassword);
+    
+    return decryptedPin;
+  } catch (error) {
+    console.error('Error getting user PIN:', error);
+    throw new Error(`Failed to get PIN: ${error.message}`);
+  }
+}
+
+static async verifyUserPin(userId, password, pin) {
+  try {
+    const decryptedPin = await this.getDecryptedPin(userId, password);
+    return decryptedPin === pin;
+  } catch (error) {
+    console.error('Error verifying user PIN:', error);
+    throw new Error(`Failed to verify PIN: ${error.message}`);
+  }
+}
 }
 
 export default UserService;

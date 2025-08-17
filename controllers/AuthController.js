@@ -211,6 +211,79 @@ export async function resendVerification(req, res) {
     }
   }
 
+export const setPin = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password, pin } = req.body;
+
+    if (!pin || !password) {
+        console.log("inside==================>")
+      return ApiResponse.badRequest(res, 'PIN and password are required');
+    }
+
+    await UserService.setUserPin(userId, password, pin);
+    return ApiResponse.success(res, { message: 'PIN set successfully' });
+
+  } catch (error) {
+    console.error('Set PIN error:', error);
+    if (error.message.includes('Invalid password') || 
+        error.message.includes('PIN must be')) {
+      return ApiResponse.badRequest(res, error.message);
+    }
+    return ApiResponse.serverError(res, 'Failed to set PIN');
+  }
+};
+
+export const updatePin = async (req, res) => {
+  try {
+    const { currentPin, newPin, password } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPin || !newPin || !password) {
+      return ApiResponse.badRequest(res, 'Current PIN, new PIN and password are required');
+    }
+
+    const pinValid = await UserService.verifyUserPin(userId, password, currentPin);
+    if (!pinValid) {
+      return ApiResponse.unauthorized(res, 'Invalid current PIN');
+    }
+
+    await UserService.updateUserPin(userId, password, newPin);
+    return ApiResponse.success(res, { message: 'PIN updated successfully' });
+
+  } catch (error) {
+    console.error('Update PIN error:', error);
+    if (error.message.includes('Invalid password') || 
+        error.message.includes('PIN must be')) {
+      return ApiResponse.badRequest(res, error.message);
+    }
+    return ApiResponse.serverError(res, 'Failed to update PIN');
+  }
+};
+
+export const verifyPin = async (req, res) => {
+  try {
+    const { pin, password } = req.body;
+    const userId = req.user.id;
+
+    if (!pin || !password) {
+      return ApiResponse.badRequest(res, 'PIN and password are required');
+    }
+
+    const isValid = await UserService.verifyUserPin(userId, password, pin);
+    if (!isValid) {
+      return ApiResponse.unauthorized(res, 'Invalid PIN');
+    }
+
+    return ApiResponse.success(res, { message: 'PIN verified successfully' });
+
+  } catch (error) {
+    console.error('Verify PIN error:', error);
+    return ApiResponse.serverError(res, 'Failed to verify PIN');
+  }
+};
+
+  // helpers
   function generateJwtToken(user) {
     const JWT_SECRET = process.env.JWT_SECRET;
     if (typeof JWT_SECRET !== 'string') {
