@@ -14,3 +14,11 @@ export const TransactionType = {
 } as const;
 
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];
+
+export const TokenSymbols = {
+    USDC: 'USDC',
+    USDT: 'USDT',
+    ETH: "ETH"
+} as const;
+
+export type TokenSymbols = typeof TokenSymbols[keyof typeof TokenSymbols];
