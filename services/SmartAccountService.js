@@ -2,12 +2,12 @@ import { ethers } from 'ethers';
 import { createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { toCircleSmartAccount } from '@circle-fin/modular-wallets-core';
-import { baseSepolia, base } from 'viem/chains';
+import { baseSepolia, base, sepolia, lisk, liskSepolia } from 'viem/chains';
 import EncryptionService from './EncryptionService.js';
 
 class SmartAccountService {
-  static DEFAULT_CHAIN = baseSepolia;
-  static PRODUCTION_CHAIN = base;
+  static DEFAULT_CHAIN = sepolia;
+  static PRODUCTION_CHAIN = lisk;
 
   static getChain() {
     return process.env.NODE_ENV === 'production' 
