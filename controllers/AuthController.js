@@ -221,7 +221,7 @@ export async function resendVerification(req, res) {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { id: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
