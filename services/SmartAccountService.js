@@ -6,8 +6,8 @@ import { baseSepolia, base, sepolia, lisk, liskSepolia } from 'viem/chains';
 import EncryptionService from './EncryptionService.js';
 
 class SmartAccountService {
-  static DEFAULT_CHAIN = sepolia;
-  static PRODUCTION_CHAIN = lisk;
+  static DEFAULT_CHAIN = baseSepolia;
+  static PRODUCTION_CHAIN = base;
 
   static getChain() {
     return process.env.NODE_ENV === 'production' 

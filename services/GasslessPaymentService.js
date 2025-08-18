@@ -1,4 +1,3 @@
-// services/GaslessPaymentService.js
 import { createPublicClient, http, getContract, encodePacked, hexToBigInt } from 'viem';
 import { erc20Abi } from 'viem';
 import { createBundlerClient } from 'viem/account-abstraction';
@@ -8,7 +7,6 @@ import { getCurrentNetworkConfig, getTokenConfig } from '../config/networks.js';
 import { signPermit } from '../utils/paymaster-permit.js';
 import SmartAccountService from './SmartAccountService.js';
 import { ethers } from 'ethers';
-import { error } from 'console';
 
 class GaslessPaymentService {
   constructor() {
@@ -55,11 +53,14 @@ class GaslessPaymentService {
     description = null
   }) {
     try {
-      const account = await SmartAccountService.recreateSmartAccount(
+      const userPrivateKey = await SmartAccountService.decryptUserPrivateKey(
         encryptedPrivateKey,
         userId,
         userPassword
       );
+
+        const paymasterAddress = process.env.PAYMASTER_V07_ADDRESS;
+        const pimlicoApiKey = process.env.PIMLICO_API_KEY;
 
       // Get token configuration
       const tokenConfig = getTokenConfig(this.networkConfig.networkName, tokenSymbol);
@@ -72,6 +73,9 @@ class GaslessPaymentService {
         transport: http(this.networkConfig.rpcUrl)
       });
 
+    const owner = privateKeyToAccount(userPrivateKey);
+    const account = await toCircleSmartAccount({ client, owner });
+
       console.log(`Smart account address: ${account.address}`);
 
       const balance = await this.checkTokenBalance(account.address, tokenSymbol);
@@ -80,48 +84,65 @@ class GaslessPaymentService {
       if (balanceInWei < amountInWei) {
         throw new Error(`Insufficient ${tokenSymbol} balance. Required: ${amount}, Available: ${balance.formatted}`);
       }
-      const paymaster = await this.createPaymaster(account, client, tokenConfig);
 
-      const bundlerClient = createBundlerClient({
-        account,
-        client,
-        paymaster,
-        userOperation: {
-          estimateFeesPerGas: async () => {
-            try {
-              const { standard: fees } = await bundlerClient.request({
-                method: "pimlico_getUserOperationGasPrice",
-              });
-              return {
-                maxFeePerGas: hexToBigInt(fees.maxFeePerGas),
-                maxPriorityFeePerGas: hexToBigInt(fees.maxPriorityFeePerGas),
-              };
-            } catch (error) {
-              return {
-                maxFeePerGas: hexToBigInt('0x5F5E100'), // 100 gwei
-                maxPriorityFeePerGas: hexToBigInt('0x3B9ACA00'), // 1 gwei
-              };
-            }
-          },
-        },
-        transport: http(this.networkConfig.bundlerUrl),
-      });
+        const paymaster = {
+            async getPaymasterData(parameters) {
+                const permitAmount = ethers.parseUnits('10', tokenConfig.decimals); // 10 tokens for gas coverage
+            
+                console.log(`Creating permit for amount: ${permitAmount.toString()}`);
+                const permitSignature = await signPermit({
+                    tokenAddress: tokenConfig.address,
+                    account,
+                    client,
+                    spenderAddress: paymasterAddress,
+                    permitAmount
+                });
 
-      const userOpHash = await bundlerClient.sendUserOperation({
-        account,
-        calls: [{
-          to: tokenConfig.address,
-          abi: erc20Abi,
-          functionName: "transfer",
-          args: [recipientAddress, amountInWei],
-        }],
-      });
+                return {
+                    paymaster: paymasterAddress,
+                    paymasterData: encodePacked(
+                        ["uint8", "address", "uint256", "bytes"],
+                        [0, tokenConfig.address, permitAmount, permitSignature]
+                    ),
+                    paymasterVerificationGasLimit: 200000n,
+                    paymasterPostOpGasLimit: 150000n,
+                    isFinal: true,
+                };
+            },
+        };
 
-      console.log(`User operation hash: ${userOpHash}`);
+        // Create bundler client with paymaster support
+        const bundlerClient = createBundlerClient({
+            account,
+            client,
+            paymaster,
+            userOperation: {
+                estimateFeesPerGas: async () => {
+                    const { standard: fees } = await bundlerClient.request({
+                        method: "pimlico_getUserOperationGasPrice",
+                    });
+                    return {
+                        maxFeePerGas: hexToBigInt(fees.maxFeePerGas),
+                        maxPriorityFeePerGas: hexToBigInt(fees.maxPriorityFeePerGas),
+                    };
+                },
+            },
+            transport: http(`https://api.pimlico.io/v2/${this.chain.id}/rpc?apikey=${pimlicoApiKey}`),
+        });
 
-      const receipt = await bundlerClient.waitForUserOperationReceipt({ 
-        hash: userOpHash 
-      });
+        // Execute the transaction
+        const userOpHash = await bundlerClient.sendUserOperation({
+            account,
+            calls: [{
+                to: tokenConfig.address,
+                abi: erc20Abi,
+                functionName: "transfer",
+                args: [recipientAddress, amountInWei],
+                chain: this.chain
+            }],
+        });
+
+        const receipt = await bundlerClient.waitForUserOperationReceipt({ hash: userOpHash });
 
       return {
         success: true,
