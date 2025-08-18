@@ -122,7 +122,7 @@ export const NETWORK_CONFIG = {
 };
 
 export const getCurrentNetworkConfig = () => {
-  const defaultNetwork = process.env.NODE_ENV === 'production' ? 'lisk' : 'sepolia';
+  const defaultNetwork = process.env.NODE_ENV === 'production' ? 'base' : 'baseSepolia';
   const selectedNetwork = process.env.SELECTED_NETWORK || defaultNetwork;
   
   const config = NETWORK_CONFIG[selectedNetwork];
