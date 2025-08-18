@@ -21,11 +21,14 @@ function authenticateToken(req, res, next) {
         }
 
         req.user = decoded.user || decoded;
+        console.log('Decoded JWT:', decoded);
         
         if (decoded.exp && Date.now() >= decoded.exp * 1000) {
             return ApiResponse.unauthorized(res, 'Session expired. Please log in again.');
         }
 
+        console.log('Attached user to request:', req.user);
+        
         next();
     });
 }

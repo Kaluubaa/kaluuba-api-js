@@ -3,23 +3,28 @@ import cors from "cors"
 import dotenv from "dotenv"
 import  db  from './models/index.js';
 import authRoutes from "./routes/auth.js"
+import transactionRoutes from "./routes/transactions.js"
+import authenticateToken from "./middleware/AuthMiddleware.js";
+import { testEncryptionDecryption } from "./tests/encryption.test.js";
 dotenv.config()
 
 const app = express()
-const port = process.env.PORT || 3030
-const version = process.env.API_VERSION || 1
-const url = `/api/${version}`
-
 app.use(express.json())
 
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
+
+const port = process.env.PORT || 3030
+const version = process.env.API_VERSION || 1
+const url = `/api/${version}`
 
 
 app.use(`${url}/auth`, authRoutes)
+app.use(`${url}/transactions`, authenticateToken, transactionRoutes)
 
 app.get(`/`, (req, res) => {
   res.send('Hello World!')

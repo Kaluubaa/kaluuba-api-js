@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { toCircleSmartAccount } from '@circle-fin/modular-wallets-core';
-import { baseSepolia, base } from 'viem/chains';
+import { baseSepolia, base, sepolia, lisk, liskSepolia } from 'viem/chains';
 import EncryptionService from './EncryptionService.js';
 
 class SmartAccountService {
