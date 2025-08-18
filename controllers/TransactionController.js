@@ -5,7 +5,7 @@ import db from '../models/index.js'
 import { PaymentStatus, TransactionType } from '../utils/types.ts';
 import { getCurrentNetworkConfig, getSupportedTokens } from '../config/networks.js';
 import { validationResult, body, param, query } from 'express-validator';
-import { message } from "telegraf/filters";
+import SmartAccountService from "../services/SmartAccountService.js";
 const { User } = db
 
 const CACHE_TTL = 30000; // 30 seconds cache
@@ -62,12 +62,12 @@ export const sendToken =   async (req, res) => {
         tokenSymbol,
         amount,
         description,
-        userPassword
       } = req.body;
 
       const senderId = req.user.id;
+      const user = await User.findByPk(senderId)
 
-      console.log(`Processing token send from user ${senderId} to ${recipientIdentifier}`);
+      console.log(`Processing token send from user ${user.username} to ${recipientIdentifier}`);
       console.log(`Amount: ${amount} ${tokenSymbol}`);
 
       const result = await transactionService.createAndExecuteTransaction({
@@ -77,7 +77,7 @@ export const sendToken =   async (req, res) => {
         amount,
         description,
         transactionType: TransactionType.direct,
-        userPassword
+        userPassword: user.password
       });
 
       console.log(`Transaction completed: ${result.transactionId}`);
