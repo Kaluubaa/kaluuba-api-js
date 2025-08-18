@@ -23,12 +23,6 @@ export const sendTokensValidation = [
     .optional()
     .isLength({ max: 500 })
     .withMessage('Description must not exceed 500 characters'),
-
-  body('userPassword')
-    .notEmpty()
-    .withMessage('User password is required for transaction signing')
-    .isLength({ min: 1 })
-    .withMessage('Password cannot be empty')
 ];
 
 export const payInvoiceValidation = [
