@@ -274,7 +274,8 @@ class TransactionService {
 
       // Format amount for display
       const decimals = transaction.metadata?.tokenDecimals || 6;
-      const formattedAmount = ethers.formatUnits(transaction.amount, decimals);
+      const amountToUnits = ethers.parseUnits(transaction.amount, decimals)
+      const formattedAmount = ethers.formatUnits(amountToUnits, decimals);
 
       return {
         transactionId: transaction.transactionId,
