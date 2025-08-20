@@ -70,13 +70,11 @@ export default (sequelize, DataTypes) => {
       }
       
       const afterDiscount = subtotal - discountAmount;
-      const taxAmount = (afterDiscount * (this.taxRate || 0)) / 100;
-      const totalAmount = afterDiscount + taxAmount;
+      const totalAmount = afterDiscount;
       
       return {
         subtotal,
         discountAmount,
-        taxAmount,
         totalAmount,
         remainingAmount: totalAmount - (this.paidAmount || 0)
       };
