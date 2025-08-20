@@ -330,10 +330,12 @@ class TransactionService {
         throw new Error('User not found');
       }
 
+      const userIdInt = parseInt(userId);
+
       const whereClause = {
         [Op.or]: [
-          { senderId: userId },
-          { recipientId: userId }
+          { senderId: userIdInt },
+          { recipientId: userIdInt }
         ]
       };
 
@@ -378,7 +380,7 @@ class TransactionService {
       
         // Format the amount properly
         const formattedAmount = ethers.formatUnits(amountStr, decimals);
-        const isIncoming = transaction.recipientId === parseInt(userId);
+        const isIncoming = Number(transaction.recipientId) === userIdInt;
 
         return {
           transactionId: transaction.transactionId,
@@ -495,19 +497,6 @@ class TransactionService {
 
     const rate = mockRates[tokenSymbol.toUpperCase()] || 1.00;
     return (parseFloat(amount) * rate).toFixed(9);
-  }
-
-  async getInvoiceDetails(invoiceId) {
-    // Mock implementation - integrate with your invoice service
-    return {
-      id: invoiceId,
-      recipientAddress: '0x742d35Cc6634C0532925a3b8D39A4846FA4A6c39',
-      tokenSymbol: 'USDC',
-      amount: '100.00',
-      description: 'Service payment',
-      isPaid: false,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
-    };
   }
 
   async getTotalSent(userId) {
