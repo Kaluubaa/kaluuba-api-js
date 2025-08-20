@@ -15,7 +15,7 @@ export default (sequelize, DataTypes) => {
       // define association here
       Invoice.belongsTo(models.User, { 
         foreignKey: 'userId', 
-        as: 'creator' 
+        as: 'recipient' 
       });
       
       // Invoice belongs to a client
@@ -132,15 +132,12 @@ export default (sequelize, DataTypes) => {
         items: this.items,
         currency: this.currency,
         subtotal: this.subtotal,
-        taxRate: this.taxRate,
-        taxAmount: this.taxAmount,
         discountType: this.discountType,
         discountValue: this.discountValue,
         discountAmount: this.discountAmount,
         totalAmount: this.totalAmount,
         acceptedTokens: this.acceptedTokens,
         acceptsFiatPayment: this.acceptsFiatPayment,
-        paymentInstructions: this.paymentInstructions,
         status: InvoiceStatus.draft,
         issueDate: new Date(),
         dueDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
@@ -153,30 +150,6 @@ export default (sequelize, DataTypes) => {
       await this.update({ nextInvoiceDate: nextDate });
       
       return newInvoice;
-    }
-    
-    static async generateInvoiceNumber(userId) {
-      const year = new Date().getFullYear();
-      const prefix = `INV-${year}-`;
-      
-      // Find the last invoice number for this user and year
-      const lastInvoice = await this.findOne({
-        where: {
-          userId,
-          invoiceNumber: {
-            [Op.like]: `${prefix}%`
-          }
-        },
-        order: [['invoiceNumber', 'DESC']]
-      });
-      
-      let nextNumber = 1;
-      if (lastInvoice) {
-        const lastNumber = parseInt(lastInvoice.invoiceNumber.split('-').pop());
-        nextNumber = lastNumber + 1;
-      }
-      
-      return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
     }
     
     static async findOverdueInvoices() {
