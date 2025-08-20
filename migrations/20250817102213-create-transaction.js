@@ -1,6 +1,6 @@
 'use strict';
 
-const { PaymentStatus, TransactionType } = require('../utils/types');
+const { PaymentStatus, TransactionType } = require('../utils/types.js');
 
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
