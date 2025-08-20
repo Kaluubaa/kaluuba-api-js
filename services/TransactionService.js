@@ -2,7 +2,7 @@
 import GaslessPaymentService from './GasslessPaymentService.js';
 import SmartAccountService from './SmartAccountService.js';
 import db from '../models/index.js';
-import { PaymentStatus, TransactionType } from '../utils/types.ts';
+import { PaymentStatus, TransactionType } from '../utils/types.js';
 import { Op } from 'sequelize';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
