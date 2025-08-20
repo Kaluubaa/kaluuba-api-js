@@ -1,14 +1,11 @@
-// services/TransactionService.js
 import GaslessPaymentService from './GasslessPaymentService.js';
-import SmartAccountService from './SmartAccountService.js';
 import db from '../models/index.js';
-import { PaymentStatus, TransactionType } from '../utils/types.js';
+import { InvoiceStatus, PaymentStatus, TransactionType } from '../utils/types.js';
 import { Op } from 'sequelize';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
-import UserService from './UserService.js';
 
-const {User, Transaction} = db
+const {User, Transaction, Invoice, Client} = db
 
 class TransactionService {
   constructor() {
@@ -154,33 +151,88 @@ class TransactionService {
   async processInvoicePayment({
     payerId,
     invoiceId,
-    userPassword
+    userPassword,
+    tokenSymbol
   }) {
     try {
-      const invoice = await this.getInvoiceDetails(invoiceId);
-      
-      if (!invoice) {
-        throw new Error('Invoice not found');
-      }
+        const invoice = await Invoice.findOne({
+        where: { 
+            id: invoiceId
+        },
+        include: [
+            {
+            model: Client,
+            as: 'client',
+            include: [
+                { model: User, as: 'registeredUser' }
+            ]
+            },
+            {
+                model: User,
+                as: 'recipient'
+            }
+        ]
+        });
+        
+        if (!invoice) {
+        throw new Error('Invoice not found or access denied');
+        }
+        
+        if (invoice.status === InvoiceStatus.paid) {
+        throw new Error('Invoice already paid in full');
+        }
 
-      if (invoice.isPaid) {
-        throw new Error('Invoice already paid');
-      }
+        if (invoice.status === InvoiceStatus.cancelled) {
+        throw new Error('Invoice has been cancelled');
+        }
+        
+        if (invoice.isExpired()) {
+        throw new Error('Invoice has expired');
+        }
+    
+        const paymentAmount = parseFloat(invoice.totalAmount);
+    
+        if (paymentAmount > parseFloat(invoice.totalAmount)) {
+        throw new Error('Payment amount exceeds remaining balance');
+        }
 
-      if (new Date() > invoice.expiresAt) {
-        throw new Error('Invoice expired');
-      }
+        if (new Date() > invoice.expiresAt) {
+            throw new Error('Invoice expired');
+        }
 
-      return await this.createAndExecuteTransaction({
+       if(!invoice.recipient) {
+        throw new Error('Cant load recipient details')
+       }
+
+      const result = await this.createAndExecuteTransaction({
         senderId: payerId,
-        recipientIdentifier: invoice.recipientAddress,
-        tokenSymbol: invoice.tokenSymbol,
-        amount: invoice.amount,
+        recipientIdentifier: invoice.recipient.username,
+        tokenSymbol: tokenSymbol,
+        amount: paymentAmount,
         description: `Payment for invoice ${invoiceId}`,
         transactionType: TransactionType.invoice,
         invoiceId,
         userPassword
       });
+
+        const newPaidAmount = parseFloat(invoice.paidAmount) + paymentAmount;
+        const newRemainingAmount = parseFloat(invoice.totalAmount) - newPaidAmount;
+      
+            let newStatus = invoice.status;
+            if (newRemainingAmount <= 0) {
+              newStatus = InvoiceStatus.paid;
+            } else if (newPaidAmount > 0) {
+              newStatus = InvoiceStatus.partial;
+            }
+      
+            await invoice.update({
+              paidAmount: newPaidAmount,
+              remainingAmount: newRemainingAmount,
+              status: newStatus,
+              paidAt: newStatus === InvoiceStatus.paid ? new Date() : null
+            });
+
+            return result;
     } catch (error) {
       throw new Error(`Invoice payment failed: ${error.message}`);
     }
