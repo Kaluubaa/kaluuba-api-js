@@ -11,6 +11,30 @@ export default (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      User.hasMany(models.Transaction, {
+        foreignKey: 'senderId',
+        as: 'sentTransactions',
+        onDelete: 'CASCADE'
+      });
+
+      // User has many transactions as a recipient
+      User.hasMany(models.Transaction, {
+        foreignKey: 'recipientId',
+        as: 'receivedTransactions',
+        onDelete: 'CASCADE'
+      });
+
+      User.hasMany(models.Client, {
+        foreignKey: 'userId',
+        as: 'receiver',
+        onDelete: 'CASCADE'
+      });
+
+      User.hasMany(models.Client, {
+        foreignKey: 'clientUserId',
+        as: 'client',
+        onDelete: 'CASCADE'
+      });
     }
 
     getFullName() {
