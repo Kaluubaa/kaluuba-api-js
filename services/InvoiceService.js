@@ -74,7 +74,7 @@ class InvoiceService {
             { model: User, as: 'registeredUser', attributes: ['id', 'username', 'email'] }
           ]
         },
-        { model: User, as: 'creator', attributes: ['id', 'username', 'email'] },
+        { model: User, as: 'recipient', attributes: ['id', 'username', 'email'] },
         { model: Invoice, as: 'parentInvoice', attributes: ['id', 'invoiceNumber'] },
         { model: Invoice, as: 'recurringInvoices', attributes: ['id', 'invoiceNumber', 'status'] },
         {
@@ -126,102 +126,6 @@ class InvoiceService {
     
     await invoice.update(updates);
     return await this.getInvoiceDetails(invoiceId, userId);
-  }
-  
-  static async processPayment(invoiceId, userId, paymentData) {
-    const { amount, tokenSymbol = TokenSymbols.USDC, description = 'invoice payment' } = paymentData;
-    
-    const invoice = await Invoice.findOne({
-      where: { 
-        id: invoiceId, 
-        userId 
-      },
-      include: [
-        {
-          model: Client,
-          as: 'client',
-          include: [
-            { model: User, as: 'registeredUser' }
-          ]
-        }
-      ]
-    });
-    
-    if (!invoice) {
-      throw new Error('Invoice not found or access denied');
-    }
-    
-    if (invoice.status === InvoiceStatus.paid) {
-      throw new Error('Invoice already paid in full');
-    }
-    
-    if (invoice.isExpired()) {
-      throw new Error('Invoice has expired');
-    }
-
-    const paymentAmount = parseFloat(amount);
-    if (paymentAmount <= 0) {
-      throw new Error('Payment amount must be positive');
-    }
-
-    if (paymentAmount > parseFloat(invoice.remainingAmount)) {
-      throw new Error('Payment amount exceeds remaining balance');
-    }
-
-    // Get recipient and sender (same as processPayment)
-    let recipientIdentifier;
-    if (invoice.client.registeredUser) {
-      recipientIdentifier = invoice.client.registeredUser.username || invoice.client.registeredUser.email;
-    } else if (invoice.client.walletAddress) {
-      recipientIdentifier = invoice.client.walletAddress;
-    } else {
-      throw new Error('Client does not have a valid payment destination');
-    }
-
-    const sender = await User.findByPk(userId);
-    if (!sender) {
-      throw new Error('Sender not found');
-    }
-
-    try {
-      const result = await this.transactionService.createAndExecuteTransaction({
-        senderId: sender.id,
-        recipientIdentifier,
-        tokenSymbol: tokenSymbol.toUpperCase(),
-        amount: paymentAmount.toString(),
-        description: `${description} - Invoice #${invoice.invoiceNumber}`,
-        transactionType: TransactionType.invoice,
-        userPassword: sender.password,
-        invoiceId: invoice.id
-      });
-
-      // Update invoice with partial payment
-      const newPaidAmount = parseFloat(invoice.paidAmount) + paymentAmount;
-      const newRemainingAmount = parseFloat(invoice.totalAmount) - newPaidAmount;
-
-      let newStatus = invoice.status;
-      if (newRemainingAmount <= 0) {
-        newStatus = InvoiceStatus.paid;
-      } else if (newPaidAmount > 0) {
-        newStatus = InvoiceStatus.partial_paid;
-      }
-
-      await invoice.update({
-        paidAmount: newPaidAmount,
-        remainingAmount: newRemainingAmount,
-        status: newStatus,
-        paidAt: newStatus === InvoiceStatus.paid ? new Date() : null
-      });
-
-      return {
-        invoice: await this.getInvoiceDetails(invoiceId, userId),
-        paymentResult: result
-      };
-
-    } catch (error) {
-      console.error('Partial payment failed:', error);
-      throw new Error(`Partial payment processing failed: ${error.message}`);
-    }
   }
   
   static async getInvoices(userId, options = {}) {
