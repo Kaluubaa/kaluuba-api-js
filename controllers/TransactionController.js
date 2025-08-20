@@ -2,7 +2,7 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import ConversionProvider from "../services/ConversionService.js";
 import TransactionService from '../services/TransactionService.js';
 import db from '../models/index.js'
-import { PaymentStatus, TransactionType } from '../utils/types.ts';
+import { PaymentStatus, TransactionType } from '../utils/types.js';
 import { getCurrentNetworkConfig, getSupportedTokens } from '../config/networks.js';
 import { validationResult, body, param, query } from 'express-validator';
 import SmartAccountService from "../services/SmartAccountService.js";

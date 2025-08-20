@@ -1,6 +1,6 @@
 // TransactionMiddleware.js
 import { body, param, query } from 'express-validator';
-import { PaymentStatus, TokenSymbols, TransactionType } from '../utils/types.ts';
+import { PaymentStatus, TokenSymbols, TransactionType } from '../utils/types.js';
 
 export const sendTokensValidation = [
   body('recipientIdentifier')
