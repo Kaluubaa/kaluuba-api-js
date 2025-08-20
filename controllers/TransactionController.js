@@ -116,7 +116,7 @@ export const payinvoice = async (req, res) => {
       return ApiResponse.created(res, {
           ...result,
           explorerUrl: getExplorerUrl(result.transactionHash),
-          message: 'Payment of invoice was succefuly!, keep things KALUUBA-ly😉'
+          message: 'Payment of invoice was successful!, keep things KALUUBA-ly😉'
         })
 
     } catch (error) {
