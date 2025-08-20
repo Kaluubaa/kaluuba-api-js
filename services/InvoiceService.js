@@ -2,14 +2,22 @@
 
 import db from "../models/index.js"
 import { Op } from 'sequelize';
-import { InvoiceStatus, InvoiceType, PaymentStatus, TokenSymbols, TransactionType } from "../utils/types";
+import crypto from 'crypto';
+import { DiscountType, InvoiceStatus, InvoiceType, PaymentStatus, TokenSymbols, TransactionType } from "../utils/types.js";
 import TransactionService from "./TransactionService.js";
-const { Invoice, Client, User, Transaction } = db;
+const { Invoice, Client, User, Transaction, sequelize } = db;
 
 class InvoiceService {
     constructor() {
         this.transactionService = new TransactionService();
     }
+
+    static async generateInvoiceNumber() {
+        const timestamp = Date.now().toString(36);
+        const random = crypto.randomBytes(6).toString('hex');
+        return `INV-${timestamp}-${random}`.toUpperCase();
+    }
+
   static async createInvoice(userId, invoiceData) {
     try {
       const client = await Client.findOne({
@@ -23,19 +31,28 @@ class InvoiceService {
         throw new Error('Client not found or access denied');
       }
       
-      // Set due date based on client's payment terms if not provided
       if (!invoiceData.dueDate) {
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + client.paymentTerms);
+        const daysToAdd = client.paymentTerms || 7;
+        dueDate.setDate(dueDate.getDate() + daysToAdd);
+        
         invoiceData.dueDate = dueDate;
       }
+
+    const{ totalAmount, subtotal, discountAmount } = await this.calculateTotals(invoiceData.items, invoiceData.discountType || DiscountType.percentage, invoiceData.discountValue || 0);
       
-      const invoice = await Invoice.create({
+    const invoiceNumber = await this.generateInvoiceNumber();
+
+    const invoice = await Invoice.create({
         ...invoiceData,
         userId,
+        invoiceNumber,
         status: InvoiceStatus.draft,
-        remainingAmount: 0
-      });
+        remainingAmount: 0,
+        totalAmount,
+        subTotal: subtotal,
+        discountAmount
+    });
       
       return await this.getInvoiceDetails(invoice.id, userId);
     } catch (error) {
@@ -43,7 +60,7 @@ class InvoiceService {
     }
   }
   
-  static async getInvoiceDetails(invoiceId, userId) {
+  static async  getInvoiceDetails(invoiceId, userId) {
     const invoice = await Invoice.findOne({
       where: { 
         id: invoiceId, 
@@ -95,7 +112,6 @@ class InvoiceService {
         if (!invoice.sentAt) updates.sentAt = new Date();
         break;
       case InvoiceStatus.cancelled:
-        // Cancel any pending transactions
         await Transaction.update(
           { status: PaymentStatus.cancelled },
           { 
@@ -397,6 +413,30 @@ class InvoiceService {
     
     return results;
   }
+
+  static async calculateTotals(items = [], discountType, discountValue) {
+        let subtotal = 0;
+        
+        items.forEach(item => {
+          subtotal += (item.quantity || 1) * (item.amount || 0);
+        });
+        
+        let discountAmount = 0;
+        if (discountType === DiscountType.percentage) {
+          discountAmount = (subtotal * (discountValue || 0)) / 100;
+        } else if (discountType === DiscountType.fixed) {
+          discountAmount = this.discountValue || 0;
+        }
+        
+        const afterDiscount = subtotal - discountAmount;
+        const totalAmount = afterDiscount;
+        
+        return {
+          subtotal,
+          discountAmount,
+          totalAmount
+        };
+      }
 }
 
 export default InvoiceService;
