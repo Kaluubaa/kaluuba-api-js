@@ -94,7 +94,7 @@ export async function up(queryInterface, Sequelize) {
     items: {
       type: Sequelize.JSONB,
       allowNull: false,
-      comment: 'Array of invoice items: [{name, description, quantity, rate, amount, taxRate}]'
+      comment: 'Array of invoice items: [{name, description, quantity, rate, amount}]'
     },
     // Financial Information
     currency: {
