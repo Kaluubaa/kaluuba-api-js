@@ -43,3 +43,8 @@ export const DiscountType = {
   percentage: 'percentage',
   fixed: 'fixed'
 }
+
+export const CurrencyType = {
+  NGN: "NGN",
+  USD: "USD"
+}
