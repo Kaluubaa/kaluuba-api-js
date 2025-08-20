@@ -1,7 +1,10 @@
-// controllers/InvoiceController.js
 'use strict';
 
-import {  InvoiceService, ClientService } from "../services/InvoiceService.js";
+import InvoiceService from "../services/InvoiceService.js";
+import { ApiResponse } from "../utils/apiResponse.js";
+import db from "../models/index.js"
+import { CurrencyType, DiscountType, InvoiceStatus, InvoiceType } from "../utils/types.js";
+const { Invoice, Client, User } = db
 
 export const createInvoice = async (req, res) => {
     try {
@@ -12,7 +15,6 @@ export const createInvoice = async (req, res) => {
         description,
         items,
         currency,
-        taxRate,
         discountType,
         discountValue,
         dueDate,
@@ -22,12 +24,9 @@ export const createInvoice = async (req, res) => {
         recurrenceCount,
         acceptedTokens,
         acceptsFiatPayment,
-        paymentInstructions,
-        terms,
-        publicNotes
+        notes
       } = req.body;
       
-      // Validate required fields
       if (!clientId || !title || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({
           success: false,
@@ -35,13 +34,9 @@ export const createInvoice = async (req, res) => {
         });
       }
       
-      // Validate items structure
       for (const item of items) {
-        if (!item.name || typeof item.rate !== 'number' || item.rate < 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'Each item must have a name and a valid rate'
-          });
+        if (!item.name || typeof item.amount !== 'number' || item.amount < 0) {
+            return ApiResponse.error(res, 'Each item must have a name and a valid rate')
         }
       }
       
@@ -50,43 +45,33 @@ export const createInvoice = async (req, res) => {
         title,
         description,
         items,
-        currency: currency || 'USD',
-        taxRate: taxRate || 0,
+        currency: currency || CurrencyType.NGN,
         discountType,
         discountValue: discountValue || 0,
         dueDate,
         expiryDate,
-        invoiceType: invoiceType || 'one_time',
+        invoiceType: invoiceType || InvoiceType.oneTime,
         recurrenceInterval,
         recurrenceCount,
         acceptedTokens: acceptedTokens || [],
         acceptsFiatPayment: acceptsFiatPayment || false,
-        paymentInstructions,
-        terms,
-        publicNotes
+        notes
       };
       
-      // Validate recurring invoice fields
-      if (invoiceType === 'recurring' && !recurrenceInterval) {
-        return res.status(400).json({
-          success: false,
-          message: 'Recurrence interval is required for recurring invoices'
-        });
+      if (invoiceType === InvoiceType.recurring && !recurrenceInterval) {
+        return ApiResponse.error(res, 'Recurrence interval is required for recurring invoices')
       }
       
       const invoice = await InvoiceService.createInvoice(userId, invoiceData);
-      
-      res.status(201).json({
-        success: true,
+
+      return ApiResponse.created(res, {
         message: 'Invoice created successfully',
-        data: { invoice }
-      });
+        invoice
+      })
       
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message
-      });
+        console.log("INVOICE ERROR", error.message)
+        return ApiResponse.error(res, error.message || 'Failed to create invoice', error.response?.data)
     }
   }
   
@@ -117,96 +102,93 @@ export const getInvoices = async (req, res) => {
         sortOrder
       });
       
-      res.json({
-        success: true,
-        data: result
-      });
+      return ApiResponse.success(res, {
+        message: 'successfully retrieved all invoices',
+        result
+      })
       
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+        console.log("GET INVOICES ERROR: ", error.message)
+        return ApiResponse.serverError(res, error.message || 'failed to retrieve invoices', error.response?.data)
     }
   }
   
 export const getInvoice = async (req, res) =>{
     try {
       const userId = req.user.id;
-      const invoiceId = parseInt(req.params.id);
+      const invoiceId = parseInt(req.params.invoiceId);
       
       const invoice = await InvoiceService.getInvoiceDetails(invoiceId, userId);
       
-      res.json({
-        success: true,
-        data: { invoice }
-      });
+      return ApiResponse.success(res, {
+        message: 'invoice retrieved successfuly!',
+        invoice
+      })
       
     } catch (error) {
-      res.status(404).json({
-        success: false,
-        message: error.message
-      });
+        console.log("GET INVOICE ERROR: ", error.message)
+        return ApiResponse.error(res, error.message || 'failed to get invoice', error.response?.data)
     }
   }
+
 export const updateInvoice = async (req, res) => {
     try {
       const userId = req.user.id;
-      const invoiceId = parseInt(req.params.id);
+      const invoiceId = parseInt(req.params.invoiceId);
       const updateData = req.body;
       
-      // Get current invoice to check status
       const currentInvoice = await InvoiceService.getInvoiceDetails(invoiceId, userId);
       
-      if (currentInvoice.status === 'paid') {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot update paid invoices'
-        });
+      if (currentInvoice.status === InvoiceStatus.paid || currentInvoice.status === InvoiceStatus.partial) {
+        return ApiResponse.error(res, 'Cannot update paid invoices')
       }
       
-      if (currentInvoice.status === 'cancelled') {
-        return res.status(400).json({
-          success: false,
-          message: 'Cannot update cancelled invoices'
-        });
+      if (currentInvoice.status === InvoiceStatus.cancelled) {
+        return ApiResponse.error(res, 'Cannot update cancelled invoices')
       }
+      const { totalAmount, discountAmount, subtotal } = await InvoiceService.calculateTotals(
+            updateData.items, 
+            updateData.discountType || DiscountType.percentage,
+            updateData.discountValue || 0
+        )
+
+      const data = {
+        ...updateData,
+        totalAmount,
+        subTotal: subtotal,
+        discountAmount
+      }
+
+      const invoice = await currentInvoice.update(data);
       
-      const invoice = await currentInvoice.update(updateData);
-      
-      res.json({
-        success: true,
+      return ApiResponse.success(res, {
         message: 'Invoice updated successfully',
-        data: { invoice }
-      });
+        invoice
+      })
       
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message
-      });
+        return ApiResponse.error(res, error.message, error.response?.data)
     }
   }
 
 export const updateInvoiceStatus = async (req, res) => {
     try {
       const userId = req.user.id;
-      const invoiceId = parseInt(req.params.id);
+      const invoiceId = parseInt(req.params.invoiceId);
       const { status, metadata } = req.body;
       
       if (!status) {
-        return res.status(400).json({
-          success: false,
-          message: 'Status is required'
-        });
+        return ApiResponse.error(res, 'Status is required')
+      }
+
+      if (status === InvoiceStatus.paid) {
+        return ApiResponse.error(res, 'cannot change status to paid')
       }
       
-      const validStatuses = ['draft', 'sent', 'viewed', 'cancelled'];
+      const validStatuses = Object.values(InvoiceStatus);
+
       if (!validStatuses.includes(status)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid status. Valid statuses: ' + validStatuses.join(', ')
-        });
+        return ApiResponse.error(res, 'Invalid status. Valid statuses: ' + validStatuses.join(', '))
       }
       
       const invoice = await InvoiceService.updateInvoiceStatus(
@@ -215,18 +197,16 @@ export const updateInvoiceStatus = async (req, res) => {
         status, 
         metadata
       );
-      
-      res.json({
-        success: true,
-        message: `Invoice ${status} successfully`,
-        data: { invoice }
-      });
+
+      return ApiResponse.success(res, 
+        {
+            message: `Invoice ${status} successfully`,
+            invoice
+        })
       
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: error.message
-      });
+        console.log("Error Updating Status:", error.message)
+        return ApiResponse.error(res, error.message, error.response?.data)
     }
   }
 
@@ -237,22 +217,21 @@ export const getInvoiceStats = async (req, res) => {
       
       const stats = await InvoiceService.getInvoiceStats(userId, period);
       
-      res.json({
-        success: true,
-        data: { stats }
-      });
+      return ApiResponse.success(res, stats)
       
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+        console.log("Error getting Invoice", error.message)
+        return ApiResponse.serverError(res, error.message)
     }
   }
 
 export const getPublicInvoice = async (req, res) => {
     try {
-      const { invoiceNumber } = req.params;
+        const { invoiceNumber } = req.params;
+    
+        if (!invoiceNumber) {
+        return ApiResponse.badRequest(res, 'Invoice number is required');
+        }
       
       const invoice = await Invoice.findOne({
         where: { invoiceNumber },
@@ -260,7 +239,7 @@ export const getPublicInvoice = async (req, res) => {
           {
             model: Client,
             as: 'client',
-            attributes: ['contactName', 'businessName', 'email']
+            attributes: ['contactName', 'businesName', 'email']
           },
           {
             model: User,
@@ -271,35 +250,17 @@ export const getPublicInvoice = async (req, res) => {
       });
       
       if (!invoice) {
-        return res.status(404).json({
-          success: false,
-          message: 'Invoice not found'
-        });
+        return ApiResponse.badRequest(res, 'Invoice not found')
       }
       
       if (invoice.status === 'draft') {
-        return res.status(404).json({
-          success: false,
-          message: 'Invoice not available'
-        });
+        return ApiResponse.badRequest(res, 'Invoice not available')
       }
       
       if (invoice.isExpired()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invoice has expired'
-        });
+        return ApiResponse.error(res, 'Invoice has expired')
       }
       
-      // Mark as viewed if first time
-      if (invoice.status === 'sent' && !invoice.viewedAt) {
-        await invoice.update({ 
-          status: 'viewed',
-          viewedAt: new Date()
-        });
-      }
-      
-      // Don't expose sensitive data
       const publicInvoiceData = {
         id: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
@@ -308,7 +269,6 @@ export const getPublicInvoice = async (req, res) => {
         items: invoice.items,
         currency: invoice.currency,
         subtotal: invoice.subtotal,
-        taxRate: invoice.taxRate,
         taxAmount: invoice.taxAmount,
         discountAmount: invoice.discountAmount,
         totalAmount: invoice.totalAmount,
@@ -318,9 +278,7 @@ export const getPublicInvoice = async (req, res) => {
         expiryDate: invoice.expiryDate,
         acceptedTokens: invoice.acceptedTokens,
         acceptsFiatPayment: invoice.acceptsFiatPayment,
-        paymentInstructions: invoice.paymentInstructions,
-        terms: invoice.terms,
-        publicNotes: invoice.publicNotes,
+        notes: invoice.notes,
         paidAmount: invoice.paidAmount,
         remainingAmount: invoice.remainingAmount,
         client: invoice.client,
@@ -328,16 +286,13 @@ export const getPublicInvoice = async (req, res) => {
           username: invoice.creator.username
         }
       };
-      
-      res.json({
-        success: true,
-        data: { invoice: publicInvoiceData }
-      });
-      
+
+      return ApiResponse.success(res, {
+        invoice: publicInvoiceData
+      })
+
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
+        console.log("Error Getting invoice:", error.message)
+        return ApiResponse.serverError(res, error.message, error.response?.data)
     }
   }
