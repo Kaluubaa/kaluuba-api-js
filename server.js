@@ -4,8 +4,8 @@ import dotenv from "dotenv"
 import  db  from './models/index.js';
 import authRoutes from "./routes/auth.js"
 import transactionRoutes from "./routes/transactions.js"
+import userRoutes from "./routes/users.js"
 import authenticateToken from "./middleware/AuthMiddleware.js";
-import { testEncryptionDecryption } from "./tests/encryption.test.js";
 dotenv.config()
 
 const app = express()
@@ -25,6 +25,7 @@ const url = `/api/${version}`
 
 app.use(`${url}/auth`, authRoutes)
 app.use(`${url}/transactions`, authenticateToken, transactionRoutes)
+app.use(`${url}/user`, authenticateToken, userRoutes)
 
 app.get(`/`, (req, res) => {
   res.send('Hello World!')
