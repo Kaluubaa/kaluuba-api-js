@@ -2,7 +2,7 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import ConversionProvider from "../services/ConversionService.js";
 import TransactionService from '../services/TransactionService.js';
 import db from '../models/index.js'
-import { PaymentStatus, TransactionType } from '../utils/types.js';
+import { PaymentStatus, TokenSymbols, TransactionType } from '../utils/types.js';
 import { getCurrentNetworkConfig, getSupportedTokens } from '../config/networks.js';
 import { validationResult } from 'express-validator';
 const { User } = db
@@ -100,16 +100,18 @@ export const payinvoice = async (req, res) => {
         return ApiResponse.error(errors.array()[0]?.msg)
       }
 
-      const { invoiceId, userPassword } = req.body;
+      const { invoiceId, tokenSymbol = TokenSymbols.USDC } = req.body;
       const payerId = req.user.id;
+      const payer = await User.findByPk(payerId)
 
       console.log(`Processing invoice payment: ${invoiceId} by user ${payerId}`);
 
       const result = await transactionService.processInvoicePayment({
         payerId,
         invoiceId,
-        userPassword
-      });
+        userPassword: payer.password,
+        tokenSymbol
+      });  
 
       return ApiResponse.created(res, {
           ...result,
@@ -119,7 +121,7 @@ export const payinvoice = async (req, res) => {
 
     } catch (error) {
       console.error('Pay invoice error:', error);
-      return ApiResponse.serverError(res, error.messag || 'Invoice payment failed', error.response?.data);
+      return ApiResponse.serverError(res, error.message || 'Invoice payment failed', error.response?.data);
     }
   }
 
