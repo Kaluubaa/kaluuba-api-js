@@ -48,7 +48,7 @@ class InvoiceService {
         userId,
         invoiceNumber,
         status: InvoiceStatus.draft,
-        remainingAmount: 0,
+        remainingAmount: totalAmount,
         totalAmount,
         subTotal: subtotal,
         discountAmount
