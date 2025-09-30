@@ -2,7 +2,7 @@
 import {
   Model
 } from 'sequelize';
-import { PaymentStatus, TransactionType } from '../utils/types.ts';
+import { PaymentStatus, TransactionType } from '../utils/types.js';
 
 export default (sequelize, DataTypes) => {
   class Transaction extends Model {

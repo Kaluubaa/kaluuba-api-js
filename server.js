@@ -5,6 +5,8 @@ import  db  from './models/index.js';
 import authRoutes from "./routes/auth.js"
 import transactionRoutes from "./routes/transactions.js"
 import userRoutes from "./routes/users.js"
+import clientRoutes from "./routes/clients.js"
+import invoiceRoutes from "./routes/invoices.js"
 import authenticateToken from "./middleware/AuthMiddleware.js";
 dotenv.config()
 
@@ -26,6 +28,8 @@ const url = `/api/${version}`
 app.use(`${url}/auth`, authRoutes)
 app.use(`${url}/transactions`, authenticateToken, transactionRoutes)
 app.use(`${url}/user`, authenticateToken, userRoutes)
+app.use(`${url}/clients`, authenticateToken, clientRoutes)
+app.use(`${url}/invoices`, authenticateToken, invoiceRoutes)
 
 app.get(`/`, (req, res) => {
   res.send('Hello World!')

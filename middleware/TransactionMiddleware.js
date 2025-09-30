@@ -1,6 +1,6 @@
 // TransactionMiddleware.js
 import { body, param, query } from 'express-validator';
-import { PaymentStatus, TokenSymbols, TransactionType } from '../utils/types.ts';
+import { PaymentStatus, TokenSymbols, TransactionType } from '../utils/types.js';
 
 export const sendTokensValidation = [
   body('recipientIdentifier')
@@ -30,13 +30,7 @@ export const payInvoiceValidation = [
     .notEmpty()
     .withMessage('Invoice ID is required')
     .isLength({ min: 1, max: 100 })
-    .withMessage('Invalid invoice ID format'),
-
-  body('userPassword')
-    .notEmpty()
-    .withMessage('User password is required')
-    .isLength({ min: 1 })
-    .withMessage('Password cannot be empty')
+    .withMessage('Invalid invoice ID format')
 ];
 
 export const estimateCostValidation = [

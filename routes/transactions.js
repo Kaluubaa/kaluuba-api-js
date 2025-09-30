@@ -26,7 +26,7 @@ const balanceCheckRateLimit = rateLimit({
 
 router.get("/convert", convert)
 router.post('/send', transactionRateLimit, sendTokensValidation, sendToken);
-router.post('/pay-invoice', transactionRateLimit, payInvoiceValidation, payinvoice);
+router.post('/pay/invoice', transactionRateLimit, payInvoiceValidation, payinvoice);
 router.get('/balances', balanceCheckRateLimit, getBalances);
 router.post('/estimate', estimateCostValidation, estimateCost);
 router.get('/:transactionId/status', transactionIdValidation, getTransactionStatus);

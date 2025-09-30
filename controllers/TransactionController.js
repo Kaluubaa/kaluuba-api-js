@@ -2,10 +2,9 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import ConversionProvider from "../services/ConversionService.js";
 import TransactionService from '../services/TransactionService.js';
 import db from '../models/index.js'
-import { PaymentStatus, TransactionType } from '../utils/types.ts';
+import { PaymentStatus, TokenSymbols, TransactionType } from '../utils/types.js';
 import { getCurrentNetworkConfig, getSupportedTokens } from '../config/networks.js';
-import { validationResult, body, param, query } from 'express-validator';
-import SmartAccountService from "../services/SmartAccountService.js";
+import { validationResult } from 'express-validator';
 const { User } = db
 
 const CACHE_TTL = 30000; // 30 seconds cache
@@ -101,26 +100,28 @@ export const payinvoice = async (req, res) => {
         return ApiResponse.error(errors.array()[0]?.msg)
       }
 
-      const { invoiceId, userPassword } = req.body;
+      const { invoiceId, tokenSymbol = TokenSymbols.USDC } = req.body;
       const payerId = req.user.id;
+      const payer = await User.findByPk(payerId)
 
       console.log(`Processing invoice payment: ${invoiceId} by user ${payerId}`);
 
       const result = await transactionService.processInvoicePayment({
         payerId,
         invoiceId,
-        userPassword
-      });
+        userPassword: payer.password,
+        tokenSymbol
+      });  
 
       return ApiResponse.created(res, {
           ...result,
           explorerUrl: getExplorerUrl(result.transactionHash),
-          message: 'Payment of invoice was succefuly!, keep things KALUUBA-ly😉'
+          message: 'Payment of invoice was successful!, keep things KALUUBA-ly😉'
         })
 
     } catch (error) {
       console.error('Pay invoice error:', error);
-      return ApiResponse.serverError(res, error.messag || 'Invoice payment failed', error.response?.data);
+      return ApiResponse.serverError(res, error.message || 'Invoice payment failed', error.response?.data);
     }
   }
 
@@ -373,15 +374,13 @@ export const getTransactionAnalytics = async (req, res) => {
       }
       console.log("gets in")
 
-      // Get transaction history for the period
       const { transactions } = await transactionService.getUserTransactionHistory(userId, {
         page: 1,
-        limit: 1000, // Get all transactions for analytics
+        limit: 1000,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString()
       });
 
-      // Calculate analytics
       const analytics = calculateTransactionAnalytics(transactions, userId);
 
       return ApiResponse.success(res, {
@@ -416,7 +415,7 @@ if (!baseUrl) {
 return `${baseUrl}/tx/${txHash}`;
 }
 
-function  calculateTransactionAnalytics(transactions, userId) {
+function calculateTransactionAnalytics(transactions, userId) {
     const userIdInt = parseInt(userId);
     
     let totalSent = 0;
@@ -436,20 +435,31 @@ function  calculateTransactionAnalytics(transactions, userId) {
         monthlyData[month] = { sent: 0, received: 0, count: 0 };
       }
 
-      // Initialize token breakdown
       if (!tokenBreakdown[tx.tokenSymbol]) {
         tokenBreakdown[tx.tokenSymbol] = { sent: 0, received: 0, count: 0 };
       }
 
-      const isIncoming = tx.type === 'incoming';
+      let isIncoming = false;
+      
+      if (tx.counterparty && tx.counterparty.id) {
+        if (tx.counterparty.id !== userIdInt) {
+          isIncoming = tx.type === 'incoming';
+        }
+      } else {
+        isIncoming = tx.type === 'incoming';
+      }
+
+
       const usdAmount = parseFloat(tx.amountUSD || 0);
       const tokenAmount = parseFloat(tx.amount);
 
       if (isIncoming) {
-        totalReceived += usdAmount;
-        receivedCount++;
-        monthlyData[month].received += usdAmount;
-        tokenBreakdown[tx.tokenSymbol].received += tokenAmount;
+        if (tx.status === PaymentStatus.confirmed) {
+            totalReceived += usdAmount;
+            receivedCount++;
+            monthlyData[month].received += usdAmount;
+            tokenBreakdown[tx.tokenSymbol].received += tokenAmount;
+        }
       } else {
         totalSent += usdAmount;
         sentCount++;
@@ -460,10 +470,10 @@ function  calculateTransactionAnalytics(transactions, userId) {
       monthlyData[month].count++;
       tokenBreakdown[tx.tokenSymbol].count++;
 
-      // Count by status
-      if (tx.status === PaymentStatus.failed) {
+      if (tx.status === PaymentStatus.failed || tx.status === 'failed') {
         failedCount++;
-      } else if (tx.status === PaymentStatus.pending || tx.status === PaymentStatus.submitted) {
+      } else if (tx.status === PaymentStatus.pending || tx.status === 'pending' || 
+                 tx.status === PaymentStatus.submitted || tx.status === 'submitted') {
         pendingCount++;
       }
     });
@@ -501,4 +511,4 @@ function  calculateTransactionAnalytics(transactions, userId) {
         .slice(0, 5)
         .map(([symbol, data]) => ({ token: symbol, transactions: data.count }))
     };
-  }
+}
