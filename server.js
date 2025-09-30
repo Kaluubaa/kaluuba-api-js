@@ -19,7 +19,7 @@ app.use(cors({
   // origin: process.env.NODE_ENV === 'production' 
   //   ? [process.env.FRONTEND_URL, 'https://your-app.onrender.com'] 
   //   : '*',
-  origin: '*',
+  origin: "*",
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -27,7 +27,6 @@ app.use(cors({
 
 const port = process.env.PORT || 3030
 const version = process.env.API_VERSION || 1
-const baseUrl = process.env.BASE_URL
 const url = `/api/${version}`
 
 const initializeDatabase = async () => {
@@ -74,16 +73,18 @@ app.get(`${url}/health`, (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
 })
 
+// Fix 3: Proper server initialization
 const startServer = async () => {
   try {
     await initializeDatabase();
     initializeCronJob();
-  
     
-    app.listen(baseUrl, version, () => {
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    
+    app.listen(port, host, () => {
       console.log(`Kaluuba API running in ${process.env.NODE_ENV || 'development'} mode`);
-      console.log(`Listening on ${baseUrl}:${version}`);
-      console.log(`💊 Health check: ${baseUrl}:${version}/health`);
+      console.log(`Listening on http://${host}:${port}`);
+      console.log(`Health check: http://${host}:${port}${url}/health`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
