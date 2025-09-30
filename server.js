@@ -23,7 +23,10 @@ app.use(cors({
 
 const port = process.env.PORT || 3030
 const version = process.env.API_VERSION || 1
+const baseUrl = process.env.BASE_URL
 const url = `/api/${version}`
+
+console.log(url)
 
 if (process.env.NODE_ENV === 'production') job.start();
 
@@ -44,6 +47,6 @@ app.get(`${url}/health`, (req, res) => {
 
 db.sequelize.sync({ alter: true }).then(() => {
     app.listen(port, () => {
-        console.log(`Kaluuba api: listening on http://localhost:${port}`)
+        console.log(`Kaluuba api: listening on ${baseUrl}/${version}`)
     })
 })
