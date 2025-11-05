@@ -8,24 +8,39 @@ class EmailService {
     this.transporter = this.createTransporter();
   }
 
-  createTransporter() {
-    const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'EMAIL_FROM', 'EMAIL_PASSWORD'];
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-    
-    if (missingVars.length > 0) {
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-    }
-
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT),
-      secure: process.env.EMAIL_SECURE === 'true', // true for 465,
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_PASSWORD,
-      },
+createTransporter() {
+  const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'EMAIL_FROM', 'EMAIL_PASSWORD'];
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.error('Missing environment variables:', missingVars);
+    console.error('Current env values:', {
+      SMTP_HOST: process.env.SMTP_HOST || 'NOT SET',
+      SMTP_PORT: process.env.SMTP_PORT || 'NOT SET',
+      EMAIL_FROM: process.env.EMAIL_FROM || 'NOT SET',
+      EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? '***SET***' : 'NOT SET',
+      EMAIL_SECURE: process.env.EMAIL_SECURE || 'NOT SET'
     });
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
+
+  console.log('Creating SMTP transporter with:', {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: process.env.EMAIL_SECURE === 'true',
+    user: process.env.EMAIL_FROM
+  });
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT),
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: process.env.EMAIL_FROM,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+}
 
   async sendVerificationEmail(email, username, verificationOTP) {
     try {
