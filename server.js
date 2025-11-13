@@ -9,6 +9,7 @@ import clientRoutes from "./routes/clients.js"
 import invoiceRoutes from "./routes/invoices.js"
 import authenticateToken from "./middleware/AuthMiddleware.js";
 import job from "./config/cron.js";
+import EmailService from "./services/EmailService.js";
 
 dotenv.config()
 
@@ -86,6 +87,17 @@ const startServer = async () => {
       console.log(`Listening on http://${host}:${port}`);
       console.log(`Health check: http://${host}:${port}${url}/health`);
     });
+
+    if (process.env.NODE_ENV === 'production') {
+      EmailService.testConnection().then(success => {
+        if (success) {
+          console.log('✅ Production email service ready');
+        } else {
+          console.log('❌ Production email service failed to initialize');
+        }
+      });
+    }
+
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
