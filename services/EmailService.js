@@ -73,6 +73,7 @@ createTransporter() {
   });
 
     const transporterConfig = {
+    service: 'Gmail',
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT),
     secure: process.env.EMAIL_SECURE === 'true',
@@ -260,10 +261,20 @@ getVerificationEmailTemplate(username, verificationOTP) {
       console.log('Connection details:', {
         host: process.env.SMTP_HOST,
         port: process.env.SMTP_PORT,
-        user: process.env.EMAIL_FROM
+        secure: process.env.EMAIL_SECURE,
+        user: process.env.EMAIL_FROM,
+        environment: process.env.NODE_ENV
       });
-      
-      await this.transporter.verify();
+
+      const dns = require('dns');
+      try {
+        const addresses = await dns.promises.resolve4(process.env.SMTP_HOST);
+        console.log('✅ DNS resolution successful:', addresses);
+      } catch (dnsError) {
+        console.error('❌ DNS resolution failed:', dnsError);
+      }
+
+      const verified = await this.transporter.verify();
       console.log('✅ SMTP connection verified successfully');
       return true;
     } catch (error) {
@@ -271,7 +282,8 @@ getVerificationEmailTemplate(username, verificationOTP) {
       console.error('Error details:', {
         code: error.code,
         command: error.command,
-        response: error.response
+        response: error.response,
+        stack: error.stack
       });
       return false;
     }
