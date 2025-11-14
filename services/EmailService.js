@@ -1,11 +1,13 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { Resend } from 'resend';
 
 dotenv.config();
 
 class EmailService {
   constructor() {
     this.transporter = this.createTransporter();
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
 createTransporter() {
@@ -49,11 +51,21 @@ createTransporter() {
         to: email,
         subject: 'Verify Your Email Address',
         html: this.getVerificationEmailTemplate(username, verificationOTP),
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'High',
+          'X-Mailer': 'Kaluuba Mailer v1',
+          'X-Entity-Ref-ID': verificationOTP,
+          'List-Unsubscribe': `<https://kaluuba.xyz/unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        }
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log('Verification email sent successfully:', info.messageId);
-      return { success: true, messageId: info.messageId };
+      // const info = await this.transporter.sendMail(mailOptions);
+      const info = await this.resend.emails.send(mailOptions)
+      console.log('Verification email sent successfully:', info);
+      return { success: true, messageId: info };
     } catch (error) {
       console.error('Failed to send verification email:', error);
       throw new Error('Failed to send verification email');
