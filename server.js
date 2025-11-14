@@ -88,15 +88,15 @@ const startServer = async () => {
       console.log(`Health check: http://${host}:${port}${url}/health`);
     });
 
-    if (process.env.NODE_ENV === 'production') {
-      EmailService.testConnection().then(success => {
-        if (success) {
-          console.log('✅ Production email service ready');
-        } else {
-          console.log('❌ Production email service failed to initialize');
-        }
-      });
-    }
+    // if (process.env.NODE_ENV === 'production') {
+    //   EmailService.testConnection().then(success => {
+    //     if (success) {
+    //       console.log('✅ Production email service ready');
+    //     } else {
+    //       console.log('❌ Production email service failed to initialize');
+    //     }
+    //   });
+    // }
 
   } catch (error) {
     console.error('❌ Failed to start server:', error);
